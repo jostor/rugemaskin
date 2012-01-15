@@ -9,7 +9,7 @@
 #include <avr/pgmspace.h>
 #include "Print.h"
 
-#define USE_GRAPHIC
+//#define USE_GRAPHIC
 #define USE_BITMAP
 #undef USE_JOYSTICK
 

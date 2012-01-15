@@ -23,28 +23,63 @@ const int chipSelect = 10;
 
 #include <WProgram.h>
 
-#include <SdFat.h>
+//#include <SdFat.h>
 #include <Time.h>
 #include <Wire.h>
 #include <nokia_3310_lcd.h>
 #include <DS1307RTC.h>
+#include <OneWire.h>
+#include <DallasTemperature.h>
+
 #include "TimeHandling.h"
 #include "global.h"
-#include "pitches.h"
 
-SdFat sd;
-SdFile myFile;
+#include <Fat16.h>
+#include <Fat16util.h> // use functions to print strings from flash memory
 
-
-int melody[] = {
-  NOTE_D4, NOTE_E4,NOTE_F4, NOTE_D4, NOTE_D4, NOTE_E4, NOTE_F4, NOTE_D4, NOTE_F4, NOTE_G4,NOTE_A4, NOTE_F4, NOTE_G4, NOTE_A4,
-    NOTE_A4, NOTE_B4,NOTE_A4, NOTE_G4, NOTE_F4, NOTE_D4,NOTE_A4, NOTE_B4,NOTE_A4, NOTE_G4, NOTE_F4, NOTE_D4, NOTE_D4, NOTE_A3, NOTE_D4, NOTE_D4,NOTE_A3, NOTE_D4};
+SdCard card;
+Fat16 file;
 
 
-// note durations: 4 = quarter note, 8 = eighth note, etc.:
-int noteDurations[] = {
-  4,4,4,4,4,4,4,4,4,4,2,4,4,2,
-    8,8,8,8,4,4,8,8,8,8,4,4,4,4,2,4,4,2};
+//SdFat sd;
+//SdFile myFile;
+
+// store error strings in flash to save RAM
+#define error(s) error_P(PSTR(s))
+
+// Data wire is plugged into port 2 on the Arduino
+#define ONE_WIRE_BUS A1
+
+// Setup a oneWire instance to communicate with any OneWire devices (not just Maxim/Dallas temperature ICs)
+OneWire oneWire(ONE_WIRE_BUS);
+
+// Pass our oneWire reference to Dallas Temperature.
+DallasTemperature sensors(&oneWire);
+
+
+void error_P(const char* str) {
+  PgmPrint("error: ");
+  SerialPrintln_P(str);
+  if (card.errorCode) {
+    PgmPrint("SD error: ");
+    Serial.println(card.errorCode, HEX);
+  }
+  while(1);
+}
+
+/*
+ * Write an unsigned number to file
+ */
+void writeNumber(uint32_t n) {
+  uint8_t buf[10];
+  uint8_t i = 0;
+  do {
+    i++;
+    buf[sizeof(buf) - i] = n%10 + '0';
+    n /= 10;
+  } while (n);
+  file.write(&buf[sizeof(buf) - i], i); // write the part of buf with the number
+}
 
 
 void setup()
@@ -55,6 +90,7 @@ void setup()
     Serial.begin(9600);
     Serial.print("hei");
 
+    Serial.println(FreeRam());
 
     g_lcd.init();
     g_lcd.clear();
@@ -62,23 +98,6 @@ void setup()
     g_lcd.writeStringBig( 0, 0, "123456", MENU_NORMAL );
     g_lcd.writeStringBig( 0, 0, "123456", MENU_NORMAL );
     g_lcd.writeStringBig( 0, 3, "7890+-.", MENU_NORMAL );
-//
-//    // iterate over the notes of the melody:
-//      for (int thisNote = 0; thisNote < 33; thisNote++) {
-//
-//        // to calculate the note duration, take one second
-//        // divided by the note type.
-//        //e.g. quarter note = 1000 / 4, eighth note = 1000/8, etc.
-//        int noteDuration = 1000/noteDurations[thisNote];
-//        tone(A0, melody[thisNote],noteDuration);
-//
-//        // to distinguish the notes, set a minimum time between them.
-//        // the note's duration + 30% seems to work well:
-//        int pauseBetweenNotes = noteDuration * 1.30;
-//        delay(pauseBetweenNotes);
-//        // stop the tone playing:
-//        noTone(A0);
-//      }
 
     //Set up the pins for the microSD shield
     tmElements_t tm;
@@ -92,41 +111,77 @@ void setup()
     //RTC.set(t);
 
     setSyncProvider(RTC.get);   // the function to get the time from the RTC
-    if(timeStatus()!= timeSet)
-    	Serial.println("Unable to sync with the RTC");
-    else
-        Serial.println("RTC has set the system time");
+//    if(timeStatus()!= timeSet)
+//    	Serial.println("Unable to sync with the RTC");
+//    else
+//        Serial.println("RTC has set the system time");
 
 
-    // Initialize SdFat or print a detailed error message and halt
-    // Use half speed like the native library.
-    // change to SPI_FULL_SPEED for more performance.
-    if (!sd.init(SPI_HALF_SPEED, chipSelect)) sd.initErrorHalt();
+//    // Initialize SdFat or print a detailed error message and halt
+//    // Use half speed like the native library.
+//    // change to SPI_FULL_SPEED for more performance.
+//    if (!sd.init(SPI_HALF_SPEED, chipSelect)) sd.initErrorHalt();
+//
+//    // open the file for write at end like the Native SD library
+//    if (!myFile.open("test.txt", O_RDWR | O_CREAT | O_AT_END)) {
+//      sd.errorHalt("opening test.txt for write failed");
+//    }
+//    // if the file opened okay, write to it:
+//    Serial.print("Writing to test.txt...");
+//    myFile.println("testing 1, 2, 3.");
+//
+//    // close the file:
+//    myFile.close();
+//    Serial.println("done.");
+//
+//    // re-open the file for reading:
+//    if (!myFile.open("test.txt", O_READ)) {
+//      sd.errorHalt("opening test.txt for read failed");
+//    }
+//    Serial.println("test.txt:");
+//
+//    // read from the file until there's nothing else in it:
+//    //int data;
+////    while ((data = myFile.read()) > 0) Serial.write(data);
+//    // close the file:
+//    //myFile.close();
 
-    // open the file for write at end like the Native SD library
-    if (!myFile.open("test.txt", O_RDWR | O_CREAT | O_AT_END)) {
-      sd.errorHalt("opening test.txt for write failed");
-    }
-    // if the file opened okay, write to it:
-    Serial.print("Writing to test.txt...");
-    myFile.println("testing 1, 2, 3.");
 
-    // close the file:
-    myFile.close();
-    Serial.println("done.");
+    // initialize the SD card
+      if (!card.init()) error("card.init");
 
-    // re-open the file for reading:
-    if (!myFile.open("test.txt", O_READ)) {
-      sd.errorHalt("opening test.txt for read failed");
-    }
-    Serial.println("test.txt:");
+      // initialize a FAT16 volume
+      if (!Fat16::init(&card)) error("Fat16::init");
 
-    // read from the file until there's nothing else in it:
-    int data;
-    while ((data = myFile.read()) > 0) Serial.write(data);
-    // close the file:
-    myFile.close();
+      // create a new file
+      char name[] = "WRITE00.TXT";
+      for (uint8_t i = 0; i < 100; i++) {
+        name[5] = i/10 + '0';
+        name[6] = i%10 + '0';
+        // O_CREAT - create the file if it does not exist
+        // O_EXCL - fail if the file exists
+        // O_WRITE - open for write
+        if (file.open(name, O_CREAT | O_EXCL | O_WRITE)) break;
+      }
+      if (!file.isOpen()) error ("file.open");
+      PgmPrint("Writing to: ");
+      Serial.println(name);
 
+      // write 100 line to file
+      for (uint8_t i = 0; i < 100; i++) {
+        file.write("line "); // write string from RAM
+        writeNumber(i);
+        file.write_P(PSTR(" millis = ")); // write string from flash
+        writeNumber(millis());
+        file.write("\r\n"); // file.println() would work also
+      }
+      // close file and force write of all data to the SD card
+      file.close();
+      PgmPrintln("Done");
+
+
+    // Start up the temperature library
+    sensors.begin();
 
 
 
@@ -134,6 +189,13 @@ void setup()
 
 void loop()
 {
+	Serial.println(FreeRam());
+	//Serial.print("Requesting temperatures...");
+	  sensors.requestTemperatures(); // Send the command to get temperatures
+	  //Serial.println("DONE");
+
+	  //Serial.print("Temperature for the device 1 (index 0) is: ");
+	  Serial.println(sensors.getTempCByIndex(0));
 	digitalClockDisplay();
 	delay(1000);
 }
