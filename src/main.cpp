@@ -33,12 +33,21 @@ const int chipSelect = 10;
 
 #include "TimeHandling.h"
 #include "global.h"
+#include "menu.h"
 
 #include <Fat16.h>
 #include <Fat16util.h> // use functions to print strings from flash memory
 
-SdCard card;
-Fat16 file;
+#include <EEPROM.h>
+
+struct eepromStruct
+{
+	int temperature;
+};
+
+eepromStruct eeprom;
+
+
 
 
 //SdFat sd;
@@ -87,8 +96,12 @@ void setup()
     //Set up the pins for the Serial communication
     pinMode(0, INPUT);
     pinMode(1, OUTPUT);
-    Serial.begin(9600);
+    Serial.begin(115200);
     Serial.print("hei");
+
+    g_temperature = EEPROM.read(eeprom.temperature);
+
+    digitalWrite(7,g_backLight);
 
     Serial.println(FreeRam());
 
@@ -183,21 +196,53 @@ void setup()
     // Start up the temperature library
     sensors.begin();
 
-
+    menuMainMenu();
 
 }
 
 void loop()
 {
-	Serial.println(FreeRam());
+	sensors.requestTemperatures(); // Send the command to get temperatures
+		  //Serial.println("DONE");
+
+		  //Serial.print("Temperature for the device 1 (index 0) is: ");
+		  //Serial.println(sensors.getTempCByIndex(0));
+	// create a new file
+	      char name[] = "TMPLOG.TXT";
+	        // O_CREAT - create the file if it does not exist
+	        // O_EXCL - fail if the file exists
+	        // O_WRITE - open for write
+	        file.open(name, O_CREAT | O_APPEND | O_WRITE);
+
+	      if (!file.isOpen()) error ("file.open");
+	        writeNumber(year());
+	        file.write(".");
+	        writeNumber(month());
+	        file.write(".");
+	        writeNumber(day());
+	        file.write(". ");
+	        writeNumber(hour());
+	        file.write(":");
+	        writeNumber(minute());
+	        file.write(":");
+	        writeNumber(second());
+	        file.write(" ; ");
+	        writeNumber(sensors.getTempCByIndex(0));
+	        file.write("\r\n"); // file.println() would work also
+	      // close file and force write of all data to the SD card
+	      file.close();
+
+	menuCheckInput();
+	//Serial.println(FreeRam());
 	//Serial.print("Requesting temperatures...");
 	  sensors.requestTemperatures(); // Send the command to get temperatures
 	  //Serial.println("DONE");
 
 	  //Serial.print("Temperature for the device 1 (index 0) is: ");
-	  Serial.println(sensors.getTempCByIndex(0));
-	digitalClockDisplay();
-	delay(1000);
+	  //Serial.println(sensors.getTempCByIndex(0));
+
+	  //digitalClockDisplay();
+	//delay(1000);
 }
 
 
