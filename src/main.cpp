@@ -38,14 +38,8 @@ const int chipSelect = 10;
 #include <Fat16.h>
 #include <Fat16util.h> // use functions to print strings from flash memory
 
-#include <EEPROM.h>
+//#include <EEPROM.h>
 
-struct eepromStruct
-{
-	int temperature;
-};
-
-eepromStruct eeprom;
 
 
 
@@ -93,13 +87,45 @@ void writeNumber(uint32_t n) {
 
 void setup()
 {
-    //Set up the pins for the Serial communication
+    unsigned char temp_l;
+    unsigned char temp_h;
+    int temp16;
+    char string[] = "";
+
+	//Set up the pins for the Serial communication
     pinMode(0, INPUT);
     pinMode(1, OUTPUT);
     Serial.begin(115200);
+    delay(1000);
     Serial.print("hei");
 
-    g_temperature = EEPROM.read(eeprom.temperature);
+    //int hei = EEPROM.read(eeprom.temperature);
+    //Serial.print(hei);
+
+    //temp_l = EEPROM.read(eeprom.temperature_l);
+    //temp_h = EEPROM.read(eeprom.temperature_h);
+    //sprintf(string,"temp_l: %x",temp_l);
+    //Serial.println(string);
+    //sprintf(string,"temp_h: %x",temp_h);
+    //Serial.println(string);
+
+    //temp16 = (temp_h << 8);// + temp_l;
+    //sprintf(string,"temp16: %x",temp16);
+    //Serial.println(string);
+    //temp16 = temp16 & 0xFF00;
+    //sprintf(string,"temp16: %x",temp16);
+    //Serial.println(string);
+
+    //temp16 = temp16 + temp_l;
+    //sprintf(string,"temp16: %x",temp16);
+    //Serial.println(string);
+
+    //Serial.println(temp16);
+
+    //g_temperature = (float)(temp16/100);
+
+    macro_eeprom_read(g_temperature,temperature);
+    //delay(5000);
 
     digitalWrite(7,g_backLight);
 
@@ -195,8 +221,9 @@ void setup()
 
     // Start up the temperature library
     sensors.begin();
+    sensors.setResolution(12);
 
-    menuMainMenu();
+    //menuMainMenu();
 
 }
 
@@ -227,16 +254,20 @@ void loop()
 	        file.write(":");
 	        writeNumber(second());
 	        file.write(" ; ");
-	        writeNumber(sensors.getTempCByIndex(0));
+	        writeNumber(g_currentTemperature);
 	        file.write("\r\n"); // file.println() would work also
 	      // close file and force write of all data to the SD card
 	      file.close();
 
-	menuCheckInput();
+	//menuCheckInput();
 	//Serial.println(FreeRam());
 	//Serial.print("Requesting temperatures...");
-	  sensors.requestTemperatures(); // Send the command to get temperatures
+	  //sensors.requestTemperatures(); // Send the command to get temperatures
 	  //Serial.println("DONE");
+
+	  g_currentTemperature = sensors.getTempCByIndex(0);
+
+	  menuStateMachine.update();
 
 	  //Serial.print("Temperature for the device 1 (index 0) is: ");
 	  //Serial.println(sensors.getTempCByIndex(0));
@@ -244,21 +275,3 @@ void loop()
 	  //digitalClockDisplay();
 	//delay(1000);
 }
-
-
-
-
-
-
-//int main(void)
-//{
-//	//init();
-//
-//	setup();
-//
-//	for (;;)
-//		loop();
-//
-//	return 0;
-//}
-

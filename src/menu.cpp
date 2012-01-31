@@ -4,6 +4,16 @@
 #include <avr/pgmspace.h>
 #include <Fat16.h>
 #include <Fat16util.h> // use functions to print strings from flash memory
+#include <FiniteStateMachine.h>
+//#include <EEPROM.h>
+
+const byte NUMBER_OF_STATES = 2;
+
+State Main = State(menuMainMenu,menuCheckInput,clearAndHome);
+State newTemp = State(printTempMenu,menuNewTemp,clearAndHome);
+
+FSM menuStateMachine = FSM(Main);
+
 
 // function clearAndHome()
 // clear the terminal screen and send the cursor home
@@ -34,7 +44,27 @@ void menuMainMenu(void)
 	showString (PSTR("\n\r2    Toggle backlight"));
 	showString (PSTR("\n\r3    Print temperature log"));
 	showString (PSTR("\n\r4    Set temperature"));
+	showString (PSTR("\n\r5    View temperature"));
 	showString (PSTR("\n\rm    Main menu"));
+
+}
+void printTempMenu(void)
+{
+	clearAndHome();
+	showString (PSTR("\n\r             .-=-."));
+	showString (PSTR("\n\r           .'     \\_"));
+	showString (PSTR("\n\r        __.|    9 )_\\"));
+	showString (PSTR("\n\r   _.-''          /"));
+	showString (PSTR("\n\r<`'     ..._    <'"));
+	showString (PSTR("\n\r `._ .-'    `.  |"));
+	showString (PSTR("\n\r  ; `.    .-'  /"));
+	showString (PSTR("\n\r   \\  `~~'  _.'"));
+	showString (PSTR("\n\r    `\"...\"'% _"));
+	showString (PSTR("\n\r      \\__  |`.   "));
+	showString (PSTR("\n\r      /`."));
+
+
+	showString (PSTR("\n\rPlease enter new temperature (xx.xx): "));
 
 }
 
@@ -43,6 +73,52 @@ void showString (PGM_P s)
 	char c;
 	while ((c = pgm_read_byte(s++)) != 0)
 		Serial.print(c);
+}
+
+void menuNewTemp(void)
+{
+	static int i = 1;
+	static float temp = 0;
+	int temp16;
+	unsigned char temp_h;
+	unsigned char temp_l;
+
+	if (Serial.available())
+	{
+		unsigned char c = Serial.read();
+		char string[]="";
+		switch (c)
+		{
+			case '\r':
+				i=1;
+				g_temperature = temp;
+				temp16 = temp*100;
+				Serial.println(temp16);
+				temp_l = temp16 & 0xff;
+				//sprintf(string,"temp16: %x",temp16);
+				//Serial.println(string);
+				//sprintf(string,"temp_l: %x",temp_l);
+				//Serial.println(string);
+				temp_h = (temp16 >> 8) & 0xff;
+
+				macro_eeprom_write(g_temperature,temperature);
+				//EEPROM.write(eeprom.temperature_l,(temp_l));
+				//EEPROM.write(eeprom.temperature_h,(temp_h));
+				//showString (PSTR("\n\rNew temperature is set to: "));
+				//Serial.print(temp);
+				temp=0;
+				menuStateMachine.transitionTo(Main);
+				break;
+			case '.':
+				Serial.write(c);
+				break;
+			default:
+				temp = temp + ((c-'0')*(pow(10,i)));
+				Serial.write(c);
+				i--;
+				break;
+		}
+	}
 }
 
 void menuCheckInput(void)
@@ -90,23 +166,15 @@ void menuCheckInput(void)
 	}
 	case '4':
 		{
-			showString (PSTR("\n\rPlease enter new temperature (xx.xx): "));
-			char * c;
-			int i = 0;
-			while (i<=5)
-			{
-				if (i <= 5)
-				{
-					c[i] = Serial.read();
-					Serial.print(c[i]);
-					i++;
-				}
-			}
-			c[i]='\0';
-
-			g_temperature = atoi(c);
-			Serial.println(g_temperature);
-			//EEPROM.write(eeprom.temperature,g_temperature);
+			menuStateMachine.transitionTo(newTemp);
+			break;
+		}
+	case '5':
+		{
+			showString (PSTR("\n\rCurrent temperature: "));
+			Serial.print(g_currentTemperature);
+			showString (PSTR("\n\rRequested temperature: "));
+			Serial.print(g_temperature);
 			break;
 		}
 
