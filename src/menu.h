@@ -5,10 +5,15 @@
 #include <FiniteStateMachine.h>
 
 
-void menuMainMenu(void);
+void printMainMenu(void);
+void printChicken(void);
+void printDateMenu(void);
+void printTimeMenu(void);
 void showString (PGM_P s);
 void menuCheckInput(void);
 void menuNewTemp(void);
+void menuEditTime(void);
+void menuEditDate(void);
 void clearAndHome(void);
 void printTempMenu(void);
 
