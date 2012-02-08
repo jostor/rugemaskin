@@ -37,6 +37,7 @@ const int chipSelect = 10;
 
 #include <Fat16.h>
 #include <Fat16util.h> // use functions to print strings from flash memory
+#include "display.h"
 
 //#include <EEPROM.h>
 
@@ -98,6 +99,7 @@ void setup()
 	Serial.begin(115200);
 	delay(1000);
 	Serial.print("hei");
+	displayInit();
 
 	//int hei = EEPROM.read(eeprom.temperature);
 	//Serial.print(hei);
@@ -124,19 +126,20 @@ void setup()
 
 	//g_temperature = (float)(temp16/100);
 
-	macro_eeprom_read(g_temperature,temperature);
+	macro_eeprom_read(g_temperature,eeprom_temperature);
+	macro_eeprom_read(g_backLight,eeprom_backlight);
 	//delay(5000);
 
 	digitalWrite(7,g_backLight);
 
 	Serial.println(FreeRam());
 
-	g_lcd.init();
-	g_lcd.clear();
-
-	g_lcd.writeStringBig( 0, 0, "123456", MENU_NORMAL );
-	g_lcd.writeStringBig( 0, 0, "123456", MENU_NORMAL );
-	g_lcd.writeStringBig( 0, 3, "7890+-.", MENU_NORMAL );
+//	g_lcd.init();
+//	g_lcd.clear();
+//
+//	g_lcd.writeStringBig( 0, 0, "123456", MENU_NORMAL );
+//	g_lcd.writeStringBig( 0, 0, "123456", MENU_NORMAL );
+//	g_lcd.writeStringBig( 0, 3, "7890+-.", MENU_NORMAL );
 
 
 	tmElements_t tm;
@@ -245,7 +248,8 @@ void loop()
 		// O_WRITE - open for write
 		file.open(name, O_CREAT | O_APPEND | O_WRITE);
 
-		if (!file.isOpen()) error ("file.open");
+		if (!file.isOpen())
+			error ("file.open");
 		writeNumber(year());
 		file.write(".");
 		writeNumber(month());
@@ -271,6 +275,8 @@ void loop()
 
 		lastMinute = minute();
 	}
+
+	displayLoop();
 
 	menuStateMachine.update();
 

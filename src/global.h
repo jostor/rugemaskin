@@ -12,9 +12,8 @@
 
 struct __eeprom_data
 {
-	float temperature;
-	unsigned char temperature_l;
-	unsigned char temperature_h;
+	float eeprom_temperature;
+	char eeprom_backlight;
 };
 
 extern SdCard card;

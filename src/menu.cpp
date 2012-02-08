@@ -196,7 +196,7 @@ void menuNewTemp(void)
 			//Serial.println(string);
 			temp_h = (temp16 >> 8) & 0xff;
 
-			macro_eeprom_write(g_temperature,temperature);
+			macro_eeprom_write(g_temperature,eeprom_temperature);
 			//EEPROM.write(eeprom.temperature_l,(temp_l));
 			//EEPROM.write(eeprom.temperature_h,(temp_h));
 			//showString (PSTR("\n\rNew temperature is set to: "));
@@ -237,6 +237,7 @@ void menuCheckInput(void)
 			showString (PSTR("on"));
 		else
 			showString (PSTR("off"));
+		macro_eeprom_write(g_backLight,eeprom_backlight);
 		break;
 	}
 	case '3':
